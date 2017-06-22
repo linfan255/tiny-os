@@ -32,21 +32,21 @@ mbrPrintLop:
 	loop mbrPrintLop
 
 	mov eax,LOADER_START_SECTOR
-	mov cx,1
+	mov cx,4
 	mov bx,0x900
 	call loadKernalLoader
 	jmp LOADER_BASE_ADDR
-
+	
 	;=================================================================
 	;以下程序的功能是将位于第二扇区的内核加载器加载到内存0x900开始的地方
 	;参数：
 	;	eax:LBA逻辑扇区地址
-	;	cx: 操作的扇区数目，固定为1
+	;	cx: 操作的扇区数目，
 	;	bx: 加载到内存中的起始地址，即0x900
 	;=================================================================
 loadKernalLoader:
 	mov esi,eax	;保护相关参数
-	mov di,bx
+	mov di,cx
 
 	;第一步：设置要操作的扇区数
 	mov dx,0x1f2
@@ -91,7 +91,8 @@ loadKernalLoader:
 	jne .notready
 
 	;第五步：开始读取数据，并将数据加载到内存0x900处
-	mov ax,1
+	mov cx,di
+	mov ax,cx
 	mov dx,256
 	mul dx		;这里求出总共需要读取多少次，计算公式为:操作扇区数×512/2
 	mov cx,ax
