@@ -1,8 +1,108 @@
 VEDIO_SELECTOR equ (0x0003 << 3) + 0 + 0
 
+section .data
+	print_buffer dq 0 ;32位数字可以转换成8个16进制的数字，将8个16进制数字都转换成字符，总共占8个字节，每个字符一个字节
+
 [bits 32]
 section .text
 global put_char
+global put_str
+global put_int
+
+;------------------ 将栈中的32位数字用16进制打印出来 ---------------
+;edi：指向打印缓存区
+;eax：取出来待打印的数字
+;edx：待打印数字的低4位
+;ebp：函数调用必然用到的基础格式
+;ecx：循环用
+;-------------------------------------------------------------------
+put_int:
+	pushad
+	mov ebp,esp
+
+	xor edi,edi
+	xor ecx,ecx
+	xor eax,eax
+
+	mov edi,7
+	mov ecx,8		;每次取出4位，32位数字总共要取8次
+	mov eax,[ebp + 36]
+.transform:			;转化，同时存到print_buffer中去
+	mov edx,eax
+	and edx,0x0000000f
+	cmp edx,9
+	jna .less9
+
+	sub edx,10
+	add edx,'A'
+	jmp .transform_end
+
+.less9:
+	add edx,'0'
+.transform_end:
+	mov [print_buffer + edi],dl
+	dec edi
+	shr eax,4
+	loop .transform
+
+	xor edi,edi
+	xor eax,eax
+
+.clear_prefix:				;去除前面的‘0’，直到第一个非‘0’的字节位置，如果到达了最后一个字节就跳出（说明整个数字即为）
+	mov al,[print_buffer + edi]
+	cmp al,'0'
+	jne .clear_prefix_end
+	cmp edi,7
+	je .clear_prefix_end
+	inc edi
+	jmp .clear_prefix
+
+.clear_prefix_end:
+.print_int:
+	cmp edi,8
+	je .put_int_end
+	
+	xor eax,eax
+	mov al,[print_buffer + edi]	
+	push eax
+	call put_char
+	add esp,4
+	inc edi
+	loop .print_int
+
+.put_int_end:
+	popad
+	ret
+
+
+;-------------- 将一串字符串写入光标处 ----------------
+;栈中存放着/0结尾的字符串的起始地址
+;-----------------------------------------------------
+put_str:
+	push ebx
+	push eax
+	push ebp
+	mov ebp,esp
+
+	mov ebx,[ebp + 16]
+.puts_lp:
+	xor eax,eax
+	mov al,[ebx]
+	cmp al,0
+	je .put_str_end
+	push eax
+	call put_char
+	add esp,4
+	inc ebx
+	jmp .puts_lp
+
+.put_str_end:
+	mov esp,ebp
+	pop ebp
+	pop eax
+	pop ebx
+	ret
+
 ;-------------- 把参数写入屏幕光标处 -----------------
 put_char:
 	pushad
@@ -107,3 +207,5 @@ put_char:
 	mov esp,ebp
 	popad
 	ret
+	
+
