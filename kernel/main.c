@@ -1,16 +1,8 @@
 #include "print.h"
 
 void main() {
-	put_char('k');
-	put_char('e');
-	put_char('r');
-	put_char('n');
-	put_char('e');
-	put_char('l');
-	put_char('\n');
-	put_char('1');
-	put_char('2');
-	put_char('\b');
-	put_char('3');
+	put_str("hello linfan, I'm the kernel! nice to meet you.\n");
+	init();
+	asm volatile("sti");
 	while(1);
 }
