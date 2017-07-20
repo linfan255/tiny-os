@@ -6,8 +6,54 @@
 
 #define DESC_CNT 33
 
-extern void* int_entry_table[DESC_CNT];
+extern void* int_entry_table[DESC_CNT];	//里面保存的是中断处理函数的入口(即调用中断处理程序的代码块)
+void* int_table[DESC_CNT];	//保存的是中断处理程序的地址
+char* int_name[DESC_CNT];	//保存中断名字，以便将来调试用
 struct Intr_desc intr_desc_table[DESC_CNT];
+
+static void interrupt_handler(uint8_t vec_no)	//暂时的中断处理函数，只是简单打印出信息而已
+{
+	if(vec_no == 0x27 || vec_no == 0x2f)
+		return;								//忽略0x27的伪中断，0x2f则为保留项
+	
+	put_str("int vector 0x");
+	put_int(vec_no);
+	put_char(':');
+	put_str(int_name[vec_no]);
+	put_char('\n');
+}
+
+static void exception_init()
+{
+	put_str("init interrupt entry table\n");
+	int i;
+	for(i = 0; i < DESC_CNT; i++) {
+		int_name[i] = "unknown";
+		int_table[i] = interrupt_handler;
+	}
+	//为19个已知中断赋予名字，以便调试
+	int_name[0] = "Divide error";
+	int_name[1] = "Debug";
+	int_name[2] = "NMI interrupt";
+	int_name[3] = "Breakpoint";
+	int_name[4] = "Overflow";
+	int_name[5] = "Bound range exceeded";
+	int_name[6] = "Invalid Opcode";
+	int_name[7] = "Device Not Avaliable";
+	int_name[8] = "Double fault";
+	int_name[9] = "CoProcessor Segment over run";
+	int_name[10] = "Invalid TSS";
+	int_name[11] = "Segment not present";
+	int_name[12] = "Stack segment fualt";
+	int_name[13] = "General Protection";
+	int_name[14] = "Page fault";
+	
+	int_name[16] = "Floating Point Error";
+	int_name[17] = "Alignment check";
+	int_name[18] = "Machine check";
+	int_name[19] = "simd floating-point exception";
+	put_str("init interrupt entry table end\n");
+}
 
 static void init_desc_table()
 {
@@ -34,7 +80,7 @@ static void init_8259a()
 
 	//设置ICW3，设置从主片IRQ接口，写入到0x21, 0xa1
 	outb(0x21, 0x04);	//IR2接从片
-	outb(0xa1, 0x04);	//接主片的IR2
+	outb(0xa1, 0x02);	//接主片的IR2
 
 	//设置ICW4，写入到0x21, 0xa1
 	outb(0x21, 0x01);	//x86模式、手动结束中断
@@ -47,10 +93,11 @@ static void init_8259a()
 	put_str(" pic init done\n");
 }
 
-void init_idt()
+void init_idt() //初始化中断的函数
 {
 	put_str("init start\n");
 	init_desc_table();
+	exception_init();
 	init_8259a();
 
 	//加载到idtr
@@ -58,4 +105,22 @@ void init_idt()
 	asm volatile("lidt %0": :"m" (idtr));
 	put_str("idt init done\n");
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
