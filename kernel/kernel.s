@@ -3,31 +3,47 @@
 %define PUSH0	push 0
 
 extern put_str
+extern int_table
 
 section .data
-	printstr db "interrupt here!", 0xa, 0
-
 global int_entry_table
 int_entry_table:
 
 %macro VECTOR 2
 section .text
 int%1_entry:
-	%2				;如果该类型中断压入了错误码，此处被编译为nop
-	push printstr	;如果没有压入错误码，那么此处为了后面的编码，应该编译成push 0
-	call put_str
+	%2				;如果该类型中断压入了错误码，此处被编译为nop	
+	push gs
+	push fs
+	push es
+	push ds
+	pushad
+	
+	push %1
+	call [int_table + %1 * 4]
 	add esp, 4
-
+	
 	;手动模式，必须手动向其发送结束信号，OCW2 TO 0x20 0xa0
 	mov al, 0x20	;EOI位为1，其它为0
 	out 0x20, al
 	out 0xa0, al
-	add esp, 4		;跨国错误码或者0
-	iret
+	
+	jmp int_end
 
 section .data
 	dd int%1_entry
 %endmacro
+
+section .text
+global int_end
+int_end:
+	popad
+	pop ds
+	pop es
+	pop fs
+	pop gs
+	add esp, 4    ;跨过0或者错误码
+	iretd
 
 VECTOR 0, PUSH0
 VECTOR 1, PUSH0
